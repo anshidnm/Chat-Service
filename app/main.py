@@ -39,7 +39,7 @@ async def add_member_to_group(
         members.append(member)
         await chat_group.update_one(
             {"_id": ObjectId(group_id)},
-            {"members": members}
+            {"$set":{"members": members}}
         )
         group = await chat_group.find_one({"_id": ObjectId(group_id)})
     return GroupSerializer(group)
