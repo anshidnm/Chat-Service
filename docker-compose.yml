@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+    env_file:
+      - .env
+    ports:
+      - 8000:8000
+    volumes:
+      - ./app:/app
+      - media_files:/media
+    command: >
+      bash -c "uvicorn main:app --host=0.0.0.0 --reload"
+    depends_on:
+      - db
+
+  db:
+    image: mongo
+    env_file:
+      - .env
+    ports:
+      - "27017:27017"
+    volumes:
+      - db_data:/data/db
+
+volumes:
+  media_files:
+  db_data:
