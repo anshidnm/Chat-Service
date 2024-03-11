@@ -1,12 +1,13 @@
 from bson import ObjectId
-from database import chat_message, chat_group
+from database import chat_room, chat_group
 from fastapi import FastAPI, HTTPException, Body
 from typing_extensions import Annotated
 from schemas import (
     GroupCreate
 )
 from serializers import (
-    GroupSerializer
+    GroupSerializer,
+    RoomSerializer
 )
 
 
@@ -22,6 +23,11 @@ async def create_group(
     data.members = list(set(data.members))
     group = await chat_group.insert_one(data.model_dump())
     new_group = await chat_group.find_one({"_id": group.inserted_id})
+    chat_room.insert_one({
+        "room_type": "group",
+        "group_id": ObjectId(new_group["_id"]),
+        "users": []
+    }) 
     return GroupSerializer(new_group)
 
 
@@ -63,3 +69,22 @@ async def remove_member_from_group(
         )
         group = await chat_group.find_one({"_id": ObjectId(group_id)})
     return GroupSerializer(group)
+
+
+@app.post("/room", tags=["Room"])
+async def start_individual_room(
+    users: Annotated[list, Body(embed=True)]
+):
+    if len(users) != 2:
+        raise HTTPException(400, "only 2 users allowed")
+    if users[0] == users[1]:
+        raise HTTPException(400, "users must be different")
+    room = await chat_room.find_one({"users": {"$all": users}})
+    if not room:
+        inserted_room = await chat_room.insert_one({
+            "room_type": "normal",
+            "users": users,
+            "group_id": None
+        })
+        room = await chat_room.find_one({"_id": inserted_room.inserted_id})
+    return RoomSerializer(room)
