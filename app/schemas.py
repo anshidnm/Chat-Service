@@ -1,3 +1,4 @@
+from bson import ObjectId
 from pydantic import BaseModel
 
 
@@ -11,6 +12,13 @@ class ChatRoomCreate(BaseModel):
     group_id: str|None
     users: list = []
 
+
+class ChatRoomSchema(BaseModel):
+    id: str
+    room_type: str
+    group_id: str|None
+    users: list = []
+    
 
 class ChatMessageCreate(BaseModel):
     message: str

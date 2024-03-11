@@ -1,9 +1,11 @@
 from bson import ObjectId
 from database import chat_room, chat_group
 from fastapi import FastAPI, HTTPException, Body
+from typing import List
 from typing_extensions import Annotated
 from schemas import (
-    GroupCreate
+    GroupCreate,
+    ChatRoomSchema
 )
 from serializers import (
     GroupSerializer,
@@ -88,3 +90,24 @@ async def start_individual_room(
         })
         room = await chat_room.find_one({"_id": inserted_room.inserted_id})
     return RoomSerializer(room)
+
+
+@app.get("/room", tags=["Room"], response_model=List[ChatRoomSchema])
+async def list_rooms(
+    user_id: str,
+    skip: int = 0,
+    limit: int = 10
+):
+    user_groups = await chat_group.find({"members": user_id,}, projection={"_id": 1}).to_list(length=None)
+    print(user_groups)
+    rooms = await (
+        chat_room
+        .find({"users":user_id, })
+        .limit(limit)
+        .skip(skip)
+        .sort("_id", -1)
+        .to_list(length=None)
+    )
+    for room in rooms:
+        room.update({"id": str(room["_id"])})
+    return rooms
