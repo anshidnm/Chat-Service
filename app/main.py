@@ -81,7 +81,7 @@ async def start_individual_room(
         raise HTTPException(400, "only 2 users allowed")
     if users[0] == users[1]:
         raise HTTPException(400, "users must be different")
-    room = await chat_room.find_one({"users": {"$all": users}})
+    room = await chat_room.find_one({"users": {"$all": users}, "room_type": "normal"})
     if not room:
         inserted_room = await chat_room.insert_one({
             "room_type": "normal",
@@ -94,20 +94,25 @@ async def start_individual_room(
 
 @app.get("/room", tags=["Room"], response_model=List[ChatRoomSchema])
 async def list_rooms(
-    user_id: str,
+    user_id: int,
     skip: int = 0,
     limit: int = 10
 ):
     user_groups = await chat_group.find({"members": user_id,}, projection={"_id": 1}).to_list(length=None)
-    print(user_groups)
+    group_ids = [group["_id"] for group in user_groups]
     rooms = await (
         chat_room
-        .find({"users":user_id, })
+        .find({"$or": [{"users": user_id}, {"group_id": {"$in": group_ids}}]})
         .limit(limit)
         .skip(skip)
         .sort("_id", -1)
         .to_list(length=None)
     )
     for room in rooms:
-        room.update({"id": str(room["_id"])})
+        room.update(
+            {
+                "id": str(room["_id"]),
+                "group_id": str(room["group_id"]) if room["group_id"] else None,
+            }
+        )
     return rooms
