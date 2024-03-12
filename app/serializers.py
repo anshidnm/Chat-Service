@@ -7,6 +7,7 @@ def GroupSerializer(group: dict):
         "id": str(group["_id"]),
         "name": group["name"],
         "members": group["members"],
+        "created_at": group["created_at"]
     }
 
 def RoomSerializer(room: dict):
@@ -15,4 +16,5 @@ def RoomSerializer(room: dict):
         "room_type":room["room_type"],
         "group_id": room["group_id"],
         "users": room["users"],
+        "created_at": room["created_at"],
     }

@@ -18,6 +18,7 @@ class ChatRoomSchema(BaseModel):
     room_type: str
     group_id: str|None
     users: list = []
+    created_at: str|None
     
 
 class ChatMessageCreate(BaseModel):
@@ -30,3 +31,4 @@ class ChatMessageSchema(BaseModel):
     id: str
     room_id: str
     message: str
+    created_at: str|None
