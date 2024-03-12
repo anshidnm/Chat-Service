@@ -24,3 +24,9 @@ class ChatMessageCreate(BaseModel):
     message: str
     sender: int
     room_id: int
+
+
+class ChatMessageSchema(BaseModel):
+    id: str
+    room_id: str
+    message: str

@@ -1,19 +1,26 @@
 from bson import ObjectId
-from database import chat_room, chat_group
-from fastapi import FastAPI, HTTPException, Body
+from connection import ConnectionManager
+from database import chat_room, chat_group, chat_message
+from fastapi import FastAPI, HTTPException, Body, WebSocket
 from typing import List
 from typing_extensions import Annotated
 from schemas import (
     GroupCreate,
-    ChatRoomSchema
+    ChatRoomSchema,
+    ChatMessageSchema
 )
 from serializers import (
     GroupSerializer,
     RoomSerializer
 )
 
+import asyncio
+
 
 app = FastAPI(title="Chat Module")
+
+
+socket = ConnectionManager()
 
 
 @app.post("/group", tags=["Group"])
@@ -116,3 +123,52 @@ async def list_rooms(
             }
         )
     return rooms
+
+
+@app.get(
+        "/message",
+        response_model=List[ChatMessageSchema],
+        tags=["Message"]
+    )
+async def list_chat_message(
+    room_id: str,
+    skip: int = 0,
+    limit: int = 10
+):
+    chats = await (
+        chat_message
+        .find({"room_id": ObjectId(room_id)})
+        .skip(skip)
+        .limit(limit)
+        .sort("_id", 1)
+        .to_list(length=None)
+    )
+    for chat in chats:
+        chat.update(
+            {
+                "id": str(chat["_id"]),
+                "room_id": str(chat["room_id"])
+            }
+        )
+    return chats
+
+
+@app.websocket("/ws/{room_id}/{user_id}")
+async def connect_room(
+    websocket: WebSocket,
+    room_id: str,
+    user_id: str
+):
+    try:
+        await socket.connect(websocket)
+        while True:
+            data = await websocket.receive_text()
+            insertion = chat_message.insert_one({
+                "room_id": ObjectId(room_id),
+                "user_id": user_id,
+                "message": data,
+            })
+            broadcasting =  socket.broadcast(f"{user_id}: {data}")
+            await asyncio.gather(insertion, broadcasting)
+    except:
+        await socket.disconnect(websocket)
